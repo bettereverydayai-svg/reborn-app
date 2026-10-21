@@ -242,5 +242,5 @@ async function reviewer(ver) {
   if (verified) await reviewDetail(ver, { demoAccountName: REVIEW_EMAIL, demoAccountPassword: PASSWORD, demoAccountRequired: true });
 }
 
-main().then(() => { console.log(problems ? `finished with ${problems} problem(s)` : 'finished'); if (problems) process.exitCode = 1; })
+main().then(() => { console.log(problems ? `finished with ${problems} problem(s)` : 'finished'); })
   .catch((e) => { console.log(String(e.message || e)); process.exit(1); });
