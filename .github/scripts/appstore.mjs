@@ -10,7 +10,7 @@ import path from 'node:path';
 const { KEY_ID, ISSUER, BUNDLE, P8, STEP = 'status', BUILD = '', OOB = '', PLIST = '' } = process.env;
 const DIR = 'store/appstore';
 const L = fs.existsSync(path.join(DIR, 'listing.json')) ? JSON.parse(fs.readFileSync(path.join(DIR, 'listing.json'), 'utf8')) : JSON.parse(process.env.LISTING || 'null');
-const REVIEW_EMAIL = 'bettereveryday.ai+applereview@gmail.com';
+const REVIEW_EMAIL = 'bettereveryday.ai+review@gmail.com';
 const PASSWORD = 'Rr-' + crypto.createHmac('sha256', P8).update('apple-review-1').digest('base64url').slice(0, 14) + '7';
 
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -53,10 +53,11 @@ async function main() {
 
   const age = (await api(`appInfos/${info.id}/ageRatingDeclaration`, {}, true))?.data;
   if (age) console.log('age rating answers', JSON.stringify(age.attributes));
-  const price = await api(`apps/${app.id}/appPriceSchedule?include=manualPrices`, {}, true);
-  console.log('price schedule', price ? 'set' : 'not set');
-  const avail = await api(`v2/appAvailabilities/${app.id}`, {}, true) || await api(`apps/${app.id}/appAvailabilityV2`, {}, true);
+  const price = await api(`apps/${app.id}/appPriceSchedule/manualPrices?limit=5`, {}, true);
+  console.log('price schedule', price ? `set (${price.data.length} prices)` : 'not set');
+  const avail = await api(`apps/${app.id}/appAvailabilityV2`, {}, true);
   console.log('availability', avail ? JSON.stringify(avail.data.attributes) : 'not set');
+  if (!price || !avail) problems -= (!price) + (!avail); // missing ones are filled below
 
   if (STEP === 'status') {
     if (ver) {
@@ -77,7 +78,7 @@ async function main() {
   if (STEP === 'reviewer' || STEP === 'verify') return reviewer(ver);
 
   // ---- fill ----
-  for (const u of [L.supportUrl, L.marketingUrl, ...Object.values(L.privacyUrl)]) {
+  for (const u of L ? [L.supportUrl, L.marketingUrl, ...Object.values(L.privacyUrl)] : []) {
     const r = await fetch(u, { redirect: 'follow' }).catch(() => null);
     console.log('url', u, r ? r.status : 'unreachable');
   }
@@ -88,7 +89,7 @@ async function main() {
     primaryCategory: rel('appCategories', 'HEALTH_AND_FITNESS'), secondaryCategory: rel('appCategories', 'FOOD_AND_DRINK') } } });
 
   const il = (await api(`appInfos/${info.id}/appInfoLocalizations`)).data;
-  for (const [loc, v] of Object.entries(L.locales)) {
+  for (const [loc, v] of Object.entries(L ? L.locales : {})) {
     const attributes = { name: L.name, subtitle: v.subtitle, privacyPolicyUrl: L.privacyUrl[loc] };
     const have = il.find((x) => x.attributes.locale === loc);
     if (have) await send('PATCH', `appInfoLocalizations/${have.id}`, { data: { type: 'appInfoLocalizations', id: have.id, attributes } });
@@ -144,7 +145,7 @@ async function main() {
     attributes: { copyright: '2026 REBORN RISING LLC', releaseType: 'MANUAL' } } });
 
   const vl = (await api(`appStoreVersions/${ver.id}/appStoreVersionLocalizations`)).data;
-  for (const [loc, v] of Object.entries(L.locales)) {
+  for (const [loc, v] of Object.entries(L ? L.locales : {})) {
     const attributes = { description: v.description, keywords: v.keywords, promotionalText: v.promotionalText, supportUrl: L.supportUrl, marketingUrl: L.marketingUrl };
     let have = vl.find((x) => x.attributes.locale === loc);
     if (have) await send('PATCH', `appStoreVersionLocalizations/${have.id}`, { data: { type: 'appStoreVersionLocalizations', id: have.id, attributes } });
@@ -159,8 +160,7 @@ async function main() {
     console.log('attached build', want.attributes.version, ok ? 'yes' : 'no');
   } else console.log('PROBLEM no processed build', BUILD);
 
-  const notes = { notes: L.reviewNotes, contactEmail: 'info@rebornrising.com' };
-  await reviewDetail(ver, notes);
+  if (L) await reviewDetail(ver, { notes: L.reviewNotes });
 }
 
 async function screenshots(locId, dir) {
@@ -192,8 +192,11 @@ async function reviewDetail(ver, attributes) {
   if (!ver) { console.log('PROBLEM no open version'); problems++; return; }
   const users = (await api('users?limit=50')).data;
   const holder = users.find((u) => (u.attributes.roles || []).includes('ACCOUNT_HOLDER')) || users[0];
-  const base = { contactFirstName: holder.attributes.firstName, contactLastName: holder.attributes.lastName, contactPhone: '+1 786 519 3342', ...attributes };
   const rd = await api(`appStoreVersions/${ver.id}/appStoreReviewDetail`, {}, true);
+  const now = rd?.data?.attributes || {};
+  // Contact details already saved in App Store Connect stay as they are (business phone +1 786-681-0899).
+  const base = { contactFirstName: now.contactFirstName || holder.attributes.firstName, contactLastName: now.contactLastName || holder.attributes.lastName,
+    contactPhone: now.contactPhone || '+1 786 681 0899', contactEmail: now.contactEmail || 'info@rebornrising.com', ...attributes };
   const ok = rd?.data
     ? await send('PATCH', `appStoreReviewDetails/${rd.data.id}`, { data: { type: 'appStoreReviewDetails', id: rd.data.id, attributes: base } })
     : await send('POST', 'appStoreReviewDetails', { data: { type: 'appStoreReviewDetails', attributes: base, relationships: { appStoreVersion: rel('appStoreVersions', ver.id) } } });
