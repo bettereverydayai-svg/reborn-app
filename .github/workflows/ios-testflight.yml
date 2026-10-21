@@ -62,8 +62,14 @@ jobs:
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/App.xcarchive" archive \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey.p8" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER" \
-            DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="-" PROVISIONING_PROFILE_SPECIFIER="" \
+            DEVELOPMENT_TEAM="$TEAM" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             MARKETING_VERSION="${{ inputs.version }}" CURRENT_PROJECT_VERSION="$BUILD" -quiet 2>&1 | { grep -v "Run script build phase" || true; }
+          # Unsigned archive (no test device needed); add a local signature that carries the entitlements,
+          # then the export step re-signs everything for the App Store.
+          APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          find "$APP/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.dylib" \) -exec codesign --force -s - {} ; 2>/dev/null || true
+          codesign --force -s - --entitlements ios/App/App/App.entitlements "$APP"
+          codesign -d --entitlements - "$APP" | head -20
       - name: Upload to TestFlight
         run: |
           cat > "$RUNNER_TEMP/export.plist" <<PLIST
