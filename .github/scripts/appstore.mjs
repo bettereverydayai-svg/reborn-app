@@ -97,7 +97,7 @@ async function main() {
     console.log('app info', loc, 'done');
   }
 
-  if (age) {
+  if (age && !age.attributes.ageRatingOverrideV2) {
     // Answers from store-readiness/store-forms: medical info frequent, drug references infrequent (harms only), 18+.
     const a = {};
     for (const [k, val] of Object.entries(age.attributes)) {
