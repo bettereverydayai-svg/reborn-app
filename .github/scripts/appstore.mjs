@@ -13,6 +13,15 @@ const L = fs.existsSync(path.join(DIR, 'listing.json')) ? JSON.parse(fs.readFile
 const REVIEW_EMAIL = 'bettereveryday.ai+applereview@gmail.com';
 const PASSWORD = 'Rr-' + crypto.createHmac('sha256', P8).update('apple-review-1').digest('base64url').slice(0, 14) + '7';
 
+const NOTES = `Sign-in: please use Sign in with Apple on the first screen (no demo account is needed). Sign-in is required because the core feature is a private cloud backup of each person's training, nutrition and health logs, synced between their devices. Accounts can be deleted at any time in Me > Account > Delete account.
+
+The app is a fitness and nutrition tracker with AI coaching: log food and macros (Fuel tab), workouts (Train tab), daily supplements (Stack tab) and read the health encyclopedia (Learn tab).
+
+Learn is a harm-prevention reference. Steroid pages cover only harms and risks, with no use, dose or source information. Unapproved peptides are shown as research only and can't be added from the app. The app never suggests doses and never links to sellers. Every claim links to its published study.
+
+Apple Health: steps, active calories, heart rate and weight are read only after the person taps Connect your watch and grants permission. Read only; nothing is written to Apple Health, nothing is used for ads or shared.
+
+Not a medical device. For information only. Contact: info@rebornrising.com, +1 786-681-0899.`;
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
 function token() {
   const now = Math.floor(Date.now() / 1000);
@@ -76,6 +85,7 @@ async function main() {
   }
 
   if (STEP === 'reviewer' || STEP === 'verify') return reviewer(ver);
+  if (STEP === 'notes') return reviewDetail(ver, { demoAccountRequired: false, demoAccountName: '', demoAccountPassword: '', notes: NOTES });
 
   // ---- fill ----
   for (const u of L ? [L.supportUrl, L.marketingUrl, ...Object.values(L.privacyUrl)] : []) {
