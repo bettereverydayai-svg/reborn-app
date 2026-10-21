@@ -9,7 +9,7 @@ import path from 'node:path';
 
 const { KEY_ID, ISSUER, BUNDLE, P8, STEP = 'status', BUILD = '', OOB = '', PLIST = '' } = process.env;
 const DIR = 'store/appstore';
-const L = JSON.parse(fs.readFileSync(path.join(DIR, 'listing.json'), 'utf8'));
+const L = fs.existsSync(path.join(DIR, 'listing.json')) ? JSON.parse(fs.readFileSync(path.join(DIR, 'listing.json'), 'utf8')) : JSON.parse(process.env.LISTING || 'null');
 const REVIEW_EMAIL = 'bettereveryday.ai+applereview@gmail.com';
 const PASSWORD = 'Rr-' + crypto.createHmac('sha256', P8).update('apple-review-1').digest('base64url').slice(0, 14) + '7';
 
