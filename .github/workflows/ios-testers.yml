@@ -1,0 +1,61 @@
+# Shows build processing state; with "invite" set, makes an internal TestFlight group
+# (all builds) and adds the account holder to it, so the TestFlight email goes out.
+name: iPhone TestFlight testers
+on:
+  workflow_dispatch:
+    inputs:
+      invite:
+        description: 'Create the internal group and invite the account holder'
+        type: boolean
+        default: false
+jobs:
+  testers:
+    runs-on: ubuntu-latest
+    env:
+      KEY_ID: 8Y4A9LM995
+      ISSUER: cc498e55-a8b0-4e37-9913-2297be74303b
+      BUNDLE: com.rebornrising.app
+      INVITE: ${{ inputs.invite }}
+    steps:
+      - name: TestFlight
+        env:
+          P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          node - <<'JS'
+          const c = require('crypto');
+          const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+          const now = Math.floor(Date.now() / 1000);
+          const head = b64({ alg: 'ES256', kid: process.env.KEY_ID, typ: 'JWT' });
+          const body = b64({ iss: process.env.ISSUER, iat: now, exp: now + 900, aud: 'appstoreconnect-v1' });
+          const sig = c.sign('sha256', Buffer.from(head + '.' + body), { key: process.env.P8, dsaEncoding: 'ieee-p1363' }).toString('base64url');
+          const H = { Authorization: `Bearer ${head}.${body}.${sig}`, 'Content-Type': 'application/json' };
+          const api = async (path, opts = {}) => {
+            const r = await fetch('https://api.appstoreconnect.apple.com/v1/' + path, { headers: H, ...opts });
+            const j = r.status === 204 ? {} : await r.json();
+            if (!r.ok) throw new Error(path + ' ' + r.status + ' ' + JSON.stringify(j.errors));
+            return j;
+          };
+          (async () => {
+            const app = (await api('apps?filter[bundleId]=' + process.env.BUNDLE)).data[0];
+            console.log('app', app.id, app.attributes.name);
+            const builds = await api(`builds?filter[app]=${app.id}&sort=-uploadedDate&limit=3`);
+            for (const b of builds.data) console.log(`build ${b.attributes.version}: ${b.attributes.processingState}`);
+            const groups = await api(`apps/${app.id}/betaGroups`);
+            for (const g of groups.data) console.log('group', g.attributes.name, 'internal', g.attributes.isInternalGroup);
+            if (process.env.INVITE !== 'true') return;
+            let g = groups.data.find((x) => x.attributes.isInternalGroup);
+            if (!g) {
+              g = (await api('betaGroups', { method: 'POST', body: JSON.stringify({ data: { type: 'betaGroups',
+                attributes: { name: 'Team', isInternalGroup: true, hasAccessToAllBuilds: true },
+                relationships: { app: { data: { type: 'apps', id: app.id } } } } }) })).data;
+              console.log('made group Team');
+            }
+            const users = await api('users?limit=50');
+            const holder = users.data.find((u) => (u.attributes.roles || []).includes('ACCOUNT_HOLDER')) || users.data[0];
+            const a = holder.attributes;
+            await api('betaTesters', { method: 'POST', body: JSON.stringify({ data: { type: 'betaTesters',
+              attributes: { email: a.username, firstName: a.firstName, lastName: a.lastName },
+              relationships: { betaGroups: { data: [{ type: 'betaGroups', id: g.id }] } } } }) });
+            console.log('invited the account holder to group', g.attributes.name);
+          })().catch((e) => { console.log(String(e.message)); process.exit(1); });
+          JS
