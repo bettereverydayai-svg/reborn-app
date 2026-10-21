@@ -67,7 +67,7 @@ jobs:
           # Unsigned archive (no test device needed); add a local signature that carries the entitlements,
           # then the export step re-signs everything for the App Store.
           APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
-          find "$APP/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.dylib" \) -exec codesign --force -s - {} ; 2>/dev/null || true
+          find "$APP/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.dylib" \) -exec codesign --force -s - {} \; 2>/dev/null || true
           codesign --force -s - --entitlements ios/App/App/App.entitlements "$APP"
           codesign -d --entitlements - "$APP" | head -20
       - name: Upload to TestFlight
