@@ -1,0 +1,35 @@
+# App Store page: status (read only), fill (text, screenshots, age rating, price, build),
+# reviewer / verify (review login in the app's own sign-in). Never submits for review.
+name: iPhone App Store page
+on:
+  workflow_dispatch:
+    inputs:
+      step:
+        description: 'status, fill, reviewer or verify'
+        default: status
+      build:
+        description: 'Build number to attach (blank = newest processed)'
+        default: ''
+      oob:
+        description: 'Verification code from the review login email (verify step)'
+        default: ''
+jobs:
+  appstore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/scripts
+            store/appstore
+      - name: App Store Connect
+        env:
+          KEY_ID: 8Y4A9LM995
+          ISSUER: cc498e55-a8b0-4e37-9913-2297be74303b
+          BUNDLE: com.rebornrising.app
+          P8: ${{ secrets.ASC_KEY_P8 }}
+          PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+          STEP: ${{ inputs.step }}
+          BUILD: ${{ inputs.build }}
+          OOB: ${{ inputs.oob }}
+        run: node .github/scripts/appstore.mjs
