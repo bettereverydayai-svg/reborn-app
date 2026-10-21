@@ -14,8 +14,8 @@ permissions:
   contents: read
 env:
   TEAM: PPK2ASTQX5          # REBORN RISING LLC (not secret)
-  KEY_ID: KEY_ID_HERE       # App Store Connect API key id (not secret)
-  ISSUER: ISSUER_ID_HERE    # App Store Connect issuer id (not secret)
+  KEY_ID: 8Y4A9LM995       # App Store Connect API key id (not secret)
+  ISSUER: cc498e55-a8b0-4e37-9913-2297be74303b    # App Store Connect issuer id (not secret)
 jobs:
   build:
     runs-on: macos-15
