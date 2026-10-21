@@ -18,7 +18,7 @@ env:
   ISSUER: cc498e55-a8b0-4e37-9913-2297be74303b    # App Store Connect issuer id (not secret)
 jobs:
   build:
-    runs-on: macos-26
+    runs-on: macos-15
     timeout-minutes: 60
     defaults:
       run:
