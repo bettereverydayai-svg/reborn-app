@@ -1,0 +1,2 @@
+NSHealthShareUsageDescription = "Reborn Rising muestra en su página Hoy sus pasos, las calorías quemadas, su frecuencia cardíaca y su peso desde Apple Health (Apple Watch, WHOOP y otras apps). Solo lee los datos; nunca escribe en Apple Health.";
+NSHealthUpdateUsageDescription = "Reborn Rising no escribe en Apple Health.";

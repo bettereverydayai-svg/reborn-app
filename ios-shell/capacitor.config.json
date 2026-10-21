@@ -1,0 +1,13 @@
+{
+  "appId": "com.rebornrising.app",
+  "appName": "Reborn Rising",
+  "webDir": "www",
+  "backgroundColor": "#05070c",
+  "ios": { "contentInset": "never", "backgroundColor": "#05070c", "scheme": "Reborn Rising" },
+  "plugins": {
+    "LocalNotifications": { "iconColor": "#3d8bff" },
+    "Keyboard": { "resize": "native", "resizeOnFullScreen": true },
+    "FirebaseAuthentication": { "skipNativeAuth": true, "providers": ["google.com", "apple.com"] },
+    "CapacitorUpdater": { "autoUpdate": false }
+  }
+}
