@@ -197,7 +197,12 @@ async function fix(app, info, ver) {
         console.log(l.attributes.locale, set.attributes.screenshotDisplayType, sh.attributes.fileName, st.state, JSON.stringify(st.errors || []));
         if (st.state === 'COMPLETE') continue;
         const file = path.join(DIR, l.attributes.locale, sh.attributes.fileName || '');
-        if (set.attributes.screenshotDisplayType !== 'APP_IPHONE_67' || !fs.existsSync(file)) { console.log('PROBLEM cannot re-upload', l.attributes.locale, sh.attributes.fileName); problems++; continue; }
+        if (set.attributes.screenshotDisplayType !== 'APP_IPHONE_67' || !fs.existsSync(file)) {
+          // A half-uploaded picture with no file here: remove it so it stops blocking Submit.
+          const ok = await api(`appScreenshots/${sh.id}`, { method: 'DELETE' }, true);
+          console.log('  removed stuck', sh.attributes.fileName, ok ? 'ok' : 'failed');
+          continue;
+        }
         await api(`appScreenshots/${sh.id}`, { method: 'DELETE' }, true);
         await uploadOne(set.id, file);
       }
