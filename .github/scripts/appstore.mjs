@@ -85,6 +85,7 @@ async function main() {
   }
 
   if (STEP === 'reviewer' || STEP === 'verify') return reviewer(ver);
+  if (STEP === 'fix') return fix(app, info, ver);
   if (STEP === 'notes') return reviewDetail(ver, { demoAccountRequired: false, demoAccountName: '', demoAccountPassword: '', notes: NOTES });
 
   // ---- fill ----
@@ -170,6 +171,54 @@ async function main() {
     console.log('attached build', want.attributes.version, ok ? 'yes' : 'no');
   } else console.log('PROBLEM no processed build', BUILD);
 
+}
+
+// Fixes what App Store Connect lists as missing: privacy URL on every app-info language,
+// screenshots that never finished processing, and prints app-info fields (medical device question).
+async function fix(app, info, ver) {
+  console.log('appInfo fields', JSON.stringify(info.attributes));
+  const il = (await api(`appInfos/${info.id}/appInfoLocalizations`)).data;
+  for (const l of il) {
+    console.log('app info', l.attributes.locale, 'privacy', l.attributes.privacyPolicyUrl);
+    if (!l.attributes.privacyPolicyUrl) {
+      const url = l.attributes.locale.startsWith('es') ? 'https://bettereverydayai-svg.github.io/reborn-app/privacy/es/' : 'https://bettereverydayai-svg.github.io/reborn-app/privacy/';
+      const ok = await send('PATCH', `appInfoLocalizations/${l.id}`, { data: { type: 'appInfoLocalizations', id: l.id, attributes: { privacyPolicyUrl: url } } });
+      console.log('  privacy url set', !!ok);
+    }
+  }
+  const vl = (await api(`appStoreVersions/${ver.id}/appStoreVersionLocalizations`)).data;
+  for (const l of vl) {
+    const sets = await api(`appStoreVersionLocalizations/${l.id}/appScreenshotSets?include=appScreenshots&limit[appScreenshots]=50`);
+    const shots = Object.fromEntries((sets.included || []).map((x) => [x.id, x]));
+    for (const set of sets.data) {
+      for (const r of set.relationships.appScreenshots.data) {
+        const sh = shots[r.id] || (await api(`appScreenshots/${r.id}`)).data;
+        const st = sh.attributes.assetDeliveryState || {};
+        console.log(l.attributes.locale, set.attributes.screenshotDisplayType, sh.attributes.fileName, st.state, JSON.stringify(st.errors || []));
+        if (st.state === 'COMPLETE') continue;
+        const file = path.join(DIR, l.attributes.locale, sh.attributes.fileName || '');
+        if (set.attributes.screenshotDisplayType !== 'APP_IPHONE_67' || !fs.existsSync(file)) { console.log('PROBLEM cannot re-upload', l.attributes.locale, sh.attributes.fileName); problems++; continue; }
+        await api(`appScreenshots/${sh.id}`, { method: 'DELETE' }, true);
+        await uploadOne(set.id, file);
+      }
+    }
+  }
+}
+
+async function uploadOne(setId, file) {
+  const f = path.basename(file);
+  const buf = fs.readFileSync(file);
+  const shot = (await send('POST', 'appScreenshots', { data: { type: 'appScreenshots', attributes: { fileName: f, fileSize: buf.length },
+    relationships: { appScreenshotSet: rel('appScreenshotSets', setId) } } }))?.data;
+  if (!shot) return;
+  for (const op of shot.attributes.uploadOperations) {
+    const headers = Object.fromEntries(op.requestHeaders.map((h) => [h.name, h.value]));
+    const r = await fetch(op.url, { method: op.method, headers, body: buf.subarray(op.offset, op.offset + op.length) });
+    if (!r.ok) { console.log('PROBLEM upload', f, r.status); problems++; }
+  }
+  const md5 = crypto.createHash('md5').update(buf).digest('hex');
+  const ok = await send('PATCH', `appScreenshots/${shot.id}`, { data: { type: 'appScreenshots', id: shot.id, attributes: { uploaded: true, sourceFileChecksum: md5 } } });
+  console.log('  re-uploaded', f, ok ? 'ok' : 'failed');
 }
 
 async function screenshots(locId, dir) {
