@@ -170,7 +170,6 @@ async function main() {
     console.log('attached build', want.attributes.version, ok ? 'yes' : 'no');
   } else console.log('PROBLEM no processed build', BUILD);
 
-  if (L) await reviewDetail(ver, { notes: L.reviewNotes });
 }
 
 async function screenshots(locId, dir) {
