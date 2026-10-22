@@ -86,6 +86,13 @@ async function main() {
 
   if (STEP === 'reviewer' || STEP === 'verify') return reviewer(ver);
   if (STEP === 'fix') return fix(app, info, ver);
+  if (STEP === 'device') {
+    const b = builds.find((x) => x.attributes.version === (BUILD || '110'));
+    const bb = await api(`builds/${b.id}/buildBundles`, {}, true) || await api(`builds/${b.id}?include=buildBundles`, {}, true);
+    console.log('build', b.attributes.version, JSON.stringify(b.attributes));
+    for (const x of (bb.data && bb.data.length ? bb.data : bb.included || [])) console.log('bundle', JSON.stringify(x.attributes));
+    return;
+  }
   if (STEP === 'notes') return reviewDetail(ver, { demoAccountRequired: false, demoAccountName: '', demoAccountPassword: '', notes: NOTES });
 
   // ---- fill ----
