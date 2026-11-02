@@ -19,7 +19,7 @@ The app is a fitness and nutrition tracker with AI coaching: log food and macros
 
 Learn is a harm-prevention reference. Steroid pages cover only harms and risks, with no use, dose or source information. Unapproved peptides are shown as research only and can't be added from the app. The app never suggests doses and never links to sellers. Every claim links to its published study.
 
-Apple Health: steps, active calories, heart rate and weight are read only after the person taps Connect your watch and grants permission. Read only; nothing is written to Apple Health, nothing is used for ads or shared.
+Apple Health (HealthKit): on the Today tab, scroll to the card labelled "Apple Health" and tap "Connect Apple Health". After the person grants permission, the same card ("From Apple Health today") shows steps, active calories, heart rate and weight read from Apple Health. On a device without HealthKit, such as iPad, the card says Apple Health is not available on this device. Read only; nothing is written to Apple Health, nothing is used for ads or shared.
 
 Not a medical device. For information only. Contact: info@rebornrising.com, +1 786-681-0899.`;
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
