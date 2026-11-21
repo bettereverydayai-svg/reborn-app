@@ -174,6 +174,17 @@ async function main() {
     if (have) await screenshots(have.id, path.join(DIR, loc));
   }
 
+  // Languages that exist on the page but are not in listing.json (e.g. ar-SA): set only What's New.
+  if (ver.attributes && ver.attributes.versionString !== '1.0') {
+    const vl2 = (await api(`appStoreVersions/${ver.id}/appStoreVersionLocalizations`)).data;
+    for (const [loc, text] of Object.entries((L && L.whatsNewOnly) || {})) {
+      const have = vl2.find((x) => x.attributes.locale === loc);
+      if (!have) { console.log('whats new', loc, 'no such language'); continue; }
+      const ok = await send('PATCH', `appStoreVersionLocalizations/${have.id}`, { data: { type: 'appStoreVersionLocalizations', id: have.id, attributes: { whatsNew: text } } });
+      console.log('whats new', loc, ok ? 'done' : 'failed');
+    }
+  }
+
   const want = builds.find((b) => (BUILD ? b.attributes.version === BUILD : true) && b.attributes.processingState === 'VALID');
   if (want) {
     const ok = await send('PATCH', `appStoreVersions/${ver.id}/relationships/build`, rel('builds', want.id));
