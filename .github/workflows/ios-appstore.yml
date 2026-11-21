@@ -13,6 +13,9 @@ on:
       oob:
         description: 'Verification code from the review login email (verify step)'
         default: ''
+      version:
+        description: 'New App Store version to make when none is open (e.g. 1.0.1)'
+        default: ''
 jobs:
   appstore:
     runs-on: ubuntu-latest
@@ -32,4 +35,5 @@ jobs:
           STEP: ${{ inputs.step }}
           BUILD: ${{ inputs.build }}
           OOB: ${{ inputs.oob }}
+          VERSION: ${{ inputs.version }}
         run: node .github/scripts/appstore.mjs

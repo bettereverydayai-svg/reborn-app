@@ -155,8 +155,8 @@ async function main() {
 
   if (!ver) {
     ver = (await send('POST', 'appStoreVersions', { data: { type: 'appStoreVersions',
-      attributes: { platform: 'IOS', versionString: '1.0' }, relationships: { app: rel('apps', app.id) } } }, false)).data;
-    console.log('made version 1.0');
+      attributes: { platform: 'IOS', versionString: process.env.VERSION || '1.0' }, relationships: { app: rel('apps', app.id) } } }, false)).data;
+    console.log('made version', process.env.VERSION || '1.0');
   }
   // Manual release: Android and iPhone go live together, so M releases after approval.
   await send('PATCH', `appStoreVersions/${ver.id}`, { data: { type: 'appStoreVersions', id: ver.id,
@@ -165,6 +165,8 @@ async function main() {
   const vl = (await api(`appStoreVersions/${ver.id}/appStoreVersionLocalizations`)).data;
   for (const [loc, v] of Object.entries(L ? L.locales : {})) {
     const attributes = { description: v.description, keywords: v.keywords, promotionalText: v.promotionalText, supportUrl: L.supportUrl, marketingUrl: L.marketingUrl };
+    // Updates after 1.0 need What's New text.
+    if (v.whatsNew && ver.attributes && ver.attributes.versionString !== '1.0') attributes.whatsNew = v.whatsNew;
     let have = vl.find((x) => x.attributes.locale === loc);
     if (have) await send('PATCH', `appStoreVersionLocalizations/${have.id}`, { data: { type: 'appStoreVersionLocalizations', id: have.id, attributes } });
     else have = (await send('POST', 'appStoreVersionLocalizations', { data: { type: 'appStoreVersionLocalizations', attributes: { locale: loc, ...attributes }, relationships: { appStoreVersion: rel('appStoreVersions', ver.id) } } }))?.data;
