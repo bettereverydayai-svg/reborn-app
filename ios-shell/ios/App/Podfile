@@ -30,4 +30,10 @@ end
 
 post_install do |installer|
   assertDeploymentTarget(installer)
+  # Every pod builds for iOS 15 (ZIPFoundation, used by the updater pod, now needs 15; the app targets 15 too).
+  installer.pods_project.targets.each do |t|
+    t.build_configurations.each do |c|
+      c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+    end
+  end
 end
