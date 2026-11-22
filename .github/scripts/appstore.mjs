@@ -58,6 +58,7 @@ async function main() {
 
   let ver = (await api(`apps/${app.id}/appStoreVersions?filter[platform]=IOS`)).data
     .find((v) => /PREPARE_FOR_SUBMISSION|DEVELOPER_REJECTED|REJECTED|METADATA_REJECTED/.test(v.attributes.appStoreState || v.attributes.appVersionState));
+  for (const v of (await api(`apps/${app.id}/appStoreVersions?filter[platform]=IOS`)).data) console.log('all versions', v.attributes.versionString, v.attributes.appStoreState, v.attributes.appVersionState || '');
   console.log('version', ver ? `${ver.attributes.versionString} ${ver.attributes.appStoreState} ${ver.attributes.appVersionState || ''}` : 'none open');
 
   const age = (await api(`appInfos/${info.id}/ageRatingDeclaration`, {}, true))?.data;
