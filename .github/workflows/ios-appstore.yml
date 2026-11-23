@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       step:
-        description: 'status, fill, reviewer or verify'
+        description: 'status, fill, reviewer, verify or release (release only on M's word)'
         default: status
       build:
         description: 'Build number to attach (blank = newest processed)'

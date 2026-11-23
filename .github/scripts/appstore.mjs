@@ -61,6 +61,15 @@ async function main() {
   for (const v of (await api(`apps/${app.id}/appStoreVersions?filter[platform]=IOS`)).data) console.log('all versions', v.attributes.versionString, v.attributes.appStoreState, v.attributes.appVersionState || '');
   console.log('version', ver ? `${ver.attributes.versionString} ${ver.attributes.appStoreState} ${ver.attributes.appVersionState || ''}` : 'none open');
 
+  // release: only when M asked in his own words; releases the approved version waiting for a manual release.
+  if (STEP === 'release') {
+    const wait = (await api(`apps/${app.id}/appStoreVersions?filter[platform]=IOS`)).data
+      .find((v) => (v.attributes.appStoreState || v.attributes.appVersionState) === 'PENDING_DEVELOPER_RELEASE' && v.attributes.versionString === process.env.VERSION);
+    if (!wait) { console.log('PROBLEM no version', process.env.VERSION, 'waiting for release'); process.exit(1); }
+    const r = await send('POST', 'appStoreVersionReleaseRequests', { data: { type: 'appStoreVersionReleaseRequests', relationships: { appStoreVersion: { data: { type: 'appStoreVersions', id: wait.id } } } } }, false);
+    console.log('release requested', wait.attributes.versionString, r ? 'yes' : 'no');
+    return;
+  }
   const age = (await api(`appInfos/${info.id}/ageRatingDeclaration`, {}, true))?.data;
   if (age) console.log('age rating answers', JSON.stringify(age.attributes));
   const price = await api(`apps/${app.id}/appPriceSchedule/manualPrices?limit=5`, {}, true);
